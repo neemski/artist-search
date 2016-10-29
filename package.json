@@ -1,0 +1,19 @@
+{
+  "name": "artist-search",
+  "version": "1.0.0",
+  "description": "Spotify Artist Search",
+  "main": "index.js",
+  "author": "Nima Dehnashi",
+  "license": "MIT",
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "font-awesome": "^4.7.0",
+    "handlebars": "^4.0.5",
+    "http-server": "^0.9.0",
+    "jquery": "^3.1.1",
+    "lodash": "^4.16.4"
+  },
+  "scripts": {
+    "start": "./node_modules/.bin/handlebars templates/*.hbs -f templates/templates.js && ./node_modules/.bin/http-server -a localhost -p 3000 -c-1"
+  }
+}
