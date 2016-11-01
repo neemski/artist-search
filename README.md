@@ -6,7 +6,6 @@ This fully client-side application leverages the [Spotify Search API](https://de
 ![Screenshot](artist-search.png?raw=true "Main page")
 
 ## Setup
-If you want to just test this quickly, open `index.html`. Otherwise if you'd like to test on desktop and mobile simultaneously, follow these instructions:
 
 1. Run `npm install` to install all the node dependencies.
 
@@ -17,9 +16,10 @@ If you want to just test this quickly, open `index.html`. Otherwise if you'd lik
 4. Search away, friend.
 
 ## Features
-1. Searching for artists on Spotify, displaying relevant attributes like popularity and number of followers.
-2. "Infinite" scrolling.
-3. Responsive CSS design via media queries.
+1. Displays popular artists on first load.
+2. Searching for artists on Spotify, displaying relevant attributes like popularity and number of followers.
+3. "Infinite" scrolling.
+4. Responsive CSS design via media queries, CSS flexbox, etc.
 
 ## Technologies Used
 * HTML, CSS, JavaScript

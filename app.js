@@ -30,6 +30,14 @@ var app = app || {};
     var limit = 20;
 
     /**
+     * Flag used to control whether or not to display popular artists when we
+     * start the app. Useful for rate-limiting restrictions.
+     *
+     * @type {Boolean}
+     */
+    var showPopularArtistsOnStartup = true;
+
+    /**
      * Displays a shorthand/truncated version of a large number, rounded to 2
      * decimal places.
      *
@@ -44,15 +52,23 @@ var app = app || {};
             return split[0];
         }
 
-        var map = {
-            2: 'k',
-            3: 'M',
-            4: 'B',
-        };
         // Otherwise, concat the comma-separated numbers, round and truncate
         // using `map`.
-        var formatted = split[0] + '.' + split[1];
-        formatted = parseFloat(formatted).toFixed(2) + map[split.length];
+        var map = {
+            1: 'k',
+            2: 'M',
+            3: 'B',
+        };
+
+        var formatted = split[0] + '.';
+
+        split.shift();
+
+        _.each(split, function(val) {
+            formatted += val;
+        });
+
+        formatted = Number(Math.round(parseFloat(formatted) + 'e2') + 'e-2').toString() + map[split.length];
 
         return formatted;
     };
@@ -72,7 +88,7 @@ var app = app || {};
                 offset += limit;
                 app.paginate({
                     q: query,
-                    offset: offset
+                    offset: offset,
                 });
             }
         });
@@ -118,17 +134,28 @@ var app = app || {};
      * @param {Object} [params] Query parameters to pass while issuing the
      *   request.
      * @param {Function} success Callback to be executed on success.
+     * @param {Function} error Callback to be executed on error.
+     * @return {jQuery.Deferred} The jQuery Deferred object.
      */
-    app.searchArtist = function(params, success) {
+    app.searchArtist = function(params, success, error) {
         params = _.defaults(params, {type: 'artist', limit: limit});
-        $.get('https://api.spotify.com/v1/search',
+        return $.get('https://api.spotify.com/v1/search',
             params,
             success
-        ).fail(function(xhr, type, msg) {
-            var template = Handlebars.templates['error.hbs'];
-            var el = template({xhr: xhr, msg: msg});
-            app.renderMessageBar(el);
-        });
+        ).fail(error);
+    };
+
+    /**
+     * Callback to be executed on error when requesting the search endpoint.
+     *
+     * @param {jQuery.Deferred} xhr The error response object.
+     * @param {String} type The type of error (e.g. 'error').
+     * @param {String} msg The error message (e.g. 'Not Found').
+     */
+    app.searchArtistErrorCallback = function(xhr, type, msg) {
+        var template = Handlebars.templates['error.hbs'];
+        var el = template({xhr: xhr, msg: msg});
+        app.renderMessageBar(el);
     };
 
     /**
@@ -141,24 +168,37 @@ var app = app || {};
         var content = '';
 
         _.each(data.artists.items, function(artist) {
-            var data = {
+            var templateData = {
                 image: !_.isEmpty(artist.images) && artist.images[0].url,
                 name: artist.name,
                 popularity: artist.popularity,
                 popularityIcon: 'fa-ellipsis-h',
-                followers: artist.followers.total.toLocaleString('en-US'),
                 followersFormatted: truncateNumber(artist.followers.total),
                 link: artist.external_urls.spotify,
             };
 
+            var totalFollowers = artist.followers.total.toLocaleString('en-US');
+            templateData.followersLabel = artist.followers.total === 1 ? totalFollowers + ' follower' : totalFollowers + ' followers';
+
             if (artist.popularity >= 60) {
-                data.popularityIcon = 'fa-chevron-up';
+                templateData.popularityIcon = 'fa-chevron-up';
             } else if (artist.popularity < 40) {
-                data.popularityIcon = 'fa-chevron-down';
+                templateData.popularityIcon = 'fa-chevron-down';
             }
 
             template = Handlebars.templates['result.hbs'];
-            el = template(data);
+            el = template(templateData);
+
+            if (templateData.image) {
+                // Unfortunately, some images are REALLY small, and
+                // `backdrop-filter` has very limited support, so we need to
+                // dynamically add the `background-image` and use
+                // `background-size: cover` to achieve the blurred overlay.
+                var $el = $(el);
+                $el.find('.image-container, .blurred')
+                    .css('background-image', 'url("' + templateData.image + '")');
+                el = $el.get(0).outerHTML;
+            }
             content += el;
         });
 
@@ -168,23 +208,19 @@ var app = app || {};
     /**
      * Handler for triggering a new search. Does not issue a request if the
      * previous search term matches the current, or if the search bar is empty.
-     *
-     * @param {Object} [params] Query parameters to pass while issuing the
-     *   request.
      */
-    app.searchHandler = function(params) {
+    app.searchHandler = function() {
         var searchTerm = $('[data-searchbar]').val().trim();
         if (_.isEmpty(searchTerm) || query === searchTerm) {
             return;
         }
 
         query = searchTerm;
-        params = _.defaults(params, {q: query});
 
         var loadingTpl = Handlebars.templates['loading.hbs']();
         app.renderMessageBar(loadingTpl);
 
-        app.searchArtist(params, function(data) {
+        app.searchArtist({q: query}, function(data) {
             var template;
             var el;
 
@@ -197,26 +233,57 @@ var app = app || {};
 
             if (_.isEmpty(data.artists.items)) {
                 template = Handlebars.templates['no-results.hbs'];
-                el = template(params.q);
+                el = template(query);
                 app.renderMessageBar(el);
                 app.renderResults('');
                 return;
             }
 
+            // Scroll to the top of the page, since we have a fixed navbar.
+            if ($(window).scrollTop() > 0) {
+                window.scrollTo(0, 0);
+            }
+
             var content = app.buildListTemplate(data);
-            var messageTpl = Handlebars.templates['result-count.hbs']({
-                count: data.artists.items.length,
-                total: total,
-                term: params.q
-            });
-            app.renderMessageBar(messageTpl);
+            app.renderResultsBar(data);
             app.renderResults(content);
 
-            if (total > data.artists.limit) {
+            if (total > limit) {
                 // Re-bind the pagination handler if we can paginate.
                 app.bindScrollHandler();
             }
-        });
+        }, app.searchArtistErrorCallback);
+    };
+
+    /**
+     * Renders the message bar with an appropriate results template.
+     *
+     * @param {Object} data The data returned from the Spotify API.
+     * @param {Object} [templateContext] Data to pass to the template being
+     *   rendered.
+     */
+    app.renderResultsBar = function(data, templateContext) {
+        if (total === 1) {
+            // Don't render anything in the message bar for only 1 result, since
+            // it looks silly.
+            app.renderMessageBar('');
+            return;
+        }
+
+        // For the case where we are increasing the `count` while paginating.
+        templateContext = _.extend({
+            count: data.artists.items.length,
+            total: total,
+            term: query,
+        }, templateContext);
+
+        // Template chosen depends if the `total` is less than the `limit`, or
+        // if we've already paginated to the end.
+        var allResults = total <= limit || templateContext.count === total;
+        var countTemplate = allResults ? 'result-count-total.hbs' : 'result-count.hbs';
+        var messageTpl = Handlebars.templates[countTemplate](templateContext);
+
+        app.renderMessageBar(messageTpl);
     };
 
     /**
@@ -232,27 +299,79 @@ var app = app || {};
         app.searchArtist(params, function(data) {
             var content = app.buildListTemplate(data);
             var remainder = total - offset;
-            var count;
+            var paginationCount;
 
             if (remainder < data.artists.limit) {
                 // We're at the last page.
-                count = total;
+                paginationCount = total;
                 app.unbindScrollHandler();
             } else {
                 // We have more pages.
-                count = offset + data.artists.limit;
+                paginationCount = offset + data.artists.limit;
                 app.bindScrollHandler();
             }
 
-            var messageTpl = Handlebars.templates['result-count.hbs']({
-                count: count,
-                total: data.artists.total,
-                term: query
-            });
-
-            app.renderMessageBar(messageTpl);
+            app.renderResultsBar(data, {count: paginationCount});
             app.appendResults(content);
+        }, app.searchArtistErrorCallback);
+    };
+
+    /**
+     * This method handles what to display when the app starts. In a nutshell,
+     * it takes every letter of the English alphabet and calls the `/search`
+     * endpoint against that letter (scary, I know). Using jQuery Deferreds, it
+     * waits until each `GET` request is completed, and filters the results to
+     * unique items, and artists that have a popularity score 70 or higher.
+     *
+     * Unfortunately, Spotify doesn't have an endpoint to fetch popular artists,
+     * artists with lots of followers, or even some random artists - hence this
+     * method.
+     */
+    app.start = function() {
+        if (!showPopularArtistsOnStartup) {
+            return;
+        }
+
+        var alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+        var ids = {};
+        var deferreds = [];
+        var loadingTpl = Handlebars.templates['loading.hbs']();
+
+        app.renderMessageBar(loadingTpl);
+
+        _.each(alphabet, function(letter) {
+            deferreds.push(app.searchArtist({q: letter, limit: 50}));
         });
+
+        $.when.apply($, deferreds)
+            .done(function() {
+                var args = Array.prototype.slice.call(arguments);
+                // First argument in each of the args has the data.
+                var responseList = _.map(args, _.first);
+                var results = [];
+
+                // Filter out artists with popularity < 70.
+                _.each(responseList, function(data) {
+                    _.each(data.artists.items, function(item) {
+                        if (item.popularity >= 70 && !ids[item.id]) {
+                            ids[item.id] = item;
+                            results = results.concat([item]);
+                        }
+                    });
+                });
+
+                var hasResults = !_.isEmpty(results);
+                var templateToLoad = hasResults ? 'popular-artists.hbs' : 'no-results.hbs';
+                var template = Handlebars.templates[templateToLoad]();
+                app.renderMessageBar(template);
+
+                if (!hasResults) {
+                    return;
+                }
+
+                var content = app.buildListTemplate({artists: {items: results}});
+                app.renderResults(content);
+            }).fail(app.searchArtistErrorCallback);
     };
 
     $(document).ready(function() {
@@ -265,5 +384,7 @@ var app = app || {};
                 app.searchHandler();
             }
         });
+
+        app.start();
     });
 })(app);

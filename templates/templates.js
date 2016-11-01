@@ -12,9 +12,27 @@ templates['error.hbs'] = template({"compiler":[7,">= 4.0.0"],"main":function(con
 templates['loading.hbs'] = template({"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
     return "<i class=\"fa fa-refresh fa-spin fa-fw\"></i><span>Loading…</span>\n";
 },"useData":true});
-templates['no-results.hbs'] = template({"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
-    return "<p>No results found for \""
+templates['no-results.hbs'] = template({"1":function(container,depth0,helpers,partials,data) {
+    return " for \""
     + container.escapeExpression(container.lambda(depth0, depth0))
+    + "\"";
+},"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1;
+
+  return "<p>No results found"
+    + ((stack1 = helpers["if"].call(depth0 != null ? depth0 : {},depth0,{"name":"if","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
+    + ".</p>\n";
+},"useData":true});
+templates['popular-artists.hbs'] = template({"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
+    return "<p>Today's most popular artists:</p>\n";
+},"useData":true});
+templates['result-count-total.hbs'] = template({"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
+    var helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
+
+  return "<p>Showing all "
+    + alias4(((helper = (helper = helpers.total || (depth0 != null ? depth0.total : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"total","hash":{},"data":data}) : helper)))
+    + " results for: \""
+    + alias4(((helper = (helper = helpers.term || (depth0 != null ? depth0.term : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"term","hash":{},"data":data}) : helper)))
     + "\".</p>\n";
 },"useData":true});
 templates['result-count.hbs'] = template({"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
@@ -29,13 +47,7 @@ templates['result-count.hbs'] = template({"compiler":[7,">= 4.0.0"],"main":funct
     + "\".</p>\n";
 },"useData":true});
 templates['result.hbs'] = template({"1":function(container,depth0,helpers,partials,data) {
-    var helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
-
-  return "                <img src=\""
-    + alias4(((helper = (helper = helpers.image || (depth0 != null ? depth0.image : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"image","hash":{},"data":data}) : helper)))
-    + "\" alt=\""
-    + alias4(((helper = (helper = helpers.name || (depth0 != null ? depth0.name : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"name","hash":{},"data":data}) : helper)))
-    + "\">\n";
+    return "            <div class=\"blurred\"></div>\n";
 },"3":function(container,depth0,helpers,partials,data) {
     return "                <i class=\"fa fa-3x fa-user-circle\"></i>\n";
 },"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
@@ -43,8 +55,10 @@ templates['result.hbs'] = template({"1":function(container,depth0,helpers,partia
 
   return "<li class=\"item\">\n    <a href=\""
     + alias4(((helper = (helper = helpers.link || (depth0 != null ? depth0.link : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"link","hash":{},"data":data}) : helper)))
-    + "\">\n        <div class=\"image-container\">\n"
-    + ((stack1 = helpers["if"].call(alias1,(depth0 != null ? depth0.image : depth0),{"name":"if","hash":{},"fn":container.program(1, data, 0),"inverse":container.program(3, data, 0),"data":data})) != null ? stack1 : "")
+    + "\">\n"
+    + ((stack1 = helpers["if"].call(alias1,(depth0 != null ? depth0.image : depth0),{"name":"if","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
+    + "        <div class=\"image-container\">\n"
+    + ((stack1 = helpers.unless.call(alias1,(depth0 != null ? depth0.image : depth0),{"name":"unless","hash":{},"fn":container.program(3, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
     + "        </div>\n        <div class=\"artist-name ellipsis\" title=\""
     + alias4(((helper = (helper = helpers.name || (depth0 != null ? depth0.name : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"name","hash":{},"data":data}) : helper)))
     + "\">"
@@ -54,8 +68,8 @@ templates['result.hbs'] = template({"1":function(container,depth0,helpers,partia
     + "\"></i>"
     + alias4(((helper = (helper = helpers.popularity || (depth0 != null ? depth0.popularity : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"popularity","hash":{},"data":data}) : helper)))
     + "</span>\n            <span title=\""
-    + alias4(((helper = (helper = helpers.followers || (depth0 != null ? depth0.followers : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"followers","hash":{},"data":data}) : helper)))
-    + " followers\"><i class=\"fa fa-users\"></i>"
+    + alias4(((helper = (helper = helpers.followersLabel || (depth0 != null ? depth0.followersLabel : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"followersLabel","hash":{},"data":data}) : helper)))
+    + "\"><i class=\"fa fa-users\"></i>"
     + alias4(((helper = (helper = helpers.followersFormatted || (depth0 != null ? depth0.followersFormatted : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"followersFormatted","hash":{},"data":data}) : helper)))
     + "</span>\n        </div>\n    </a>\n</li>\n";
 },"useData":true});

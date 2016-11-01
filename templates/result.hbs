@@ -1,16 +1,17 @@
 <li class="item">
     <a href="{{link}}">
+        {{#if image}}
+            <div class="blurred"></div>
+        {{/if}}
         <div class="image-container">
-            {{#if image}}
-                <img src="{{image}}" alt="{{name}}">
-            {{else}}
+            {{#unless image}}
                 <i class="fa fa-3x fa-user-circle"></i>
-            {{/if}}
+            {{/unless}}
         </div>
         <div class="artist-name ellipsis" title="{{name}}">{{name}}</div>
         <div class="attributes">
             <span title="Popularity"><i class="fa {{popularityIcon}}"></i>{{popularity}}</span>
-            <span title="{{followers}} followers"><i class="fa fa-users"></i>{{followersFormatted}}</span>
+            <span title="{{followersLabel}}"><i class="fa fa-users"></i>{{followersFormatted}}</span>
         </div>
     </a>
 </li>
